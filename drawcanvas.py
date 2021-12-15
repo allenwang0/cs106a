@@ -4,7 +4,9 @@
 Stanford CS106A Python DrawCanvas
 Provides an on screen canvas with basic drawing functions.
 Nick Parlante
-draft version - Oct-3-2019
+
+Updated Windows-10 fix Oct-9-2019
+Draft version - Oct-3-2019
 See test_main() below for sample client code.
 """
 
@@ -161,14 +163,20 @@ def make_canvas(width, height, title=None):
     Optional title parameter setting the title of the window.
     """
     top = tkinter.Tk()
+
+    # The magic numbers below are a total hack, as TK incorrectly clips
+    # the drawing canvas. Tested on Mac OS X and Windows 10
+    # with the drawcanvas main() and the quilt solution.
+    # Had to change these numbers around until it works on both
+    # Windows 10 and Mac OS X.
     top.minsize(width=width + 10, height=height + 10)
     if title:
         top.title(title)
 
-    canvas = tkinter.Canvas(top, width=width, height=height)
+    canvas = tkinter.Canvas(top, width=width + 2, height=height + 2)
     canvas.pack()
-    canvas.xview_scroll(6, 'units')  # hack so (0, 0) works correctly
-    canvas.yview_scroll(6, 'units')  # otherwise it's clipped off
+    canvas.xview_scroll(8, 'units')  # hack so (0, 0) works correctly
+    canvas.yview_scroll(8, 'units')  # otherwise it's clipped off
 
     return canvas
 
