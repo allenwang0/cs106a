@@ -1,36 +1,40 @@
 #!/usr/bin/env python3
 
 """
-Stanford CS106AP SimpleImage module
+Stanford CS106A SimpleImage draft, non-final version.
 Nick Parlante
- -4/2019 stripped down version
- does not have files or foreach
-Supports creating a blank image,
-and setting red/green/blue per pixel on it.
-Features:
-1. image = SimpleImage.blank(400, 200)   # create new image of size
-2. image.width, image.height      # access size
-3. pixel = image.get_pixel(x, y)  # access pixel at x,y
-4. pixel.red = 100   # set red/green/blue of pixel
-5. image.show()      # display image on screen
+ -11/2019 add in_bounds(x, y) test
+ -5/2019 draft version, has file reading, pix, but no foreach
 
-Example use - makes big yellow image
-(this same code is in main() in this file).
+SimpleImage Features:
+Create image:
+  image = SimpleImage.blank(400, 200)   # create new image of size
+  image = SimpleImage('foo.jpg')        # create from file
 
-from simpleimage import SimpleImage
-...
+Access size
+  image.width, image.height
+  image.in_bounds(x, y) - bool test
 
-    image = SimpleImage.blank(400, 200)
-    for y in range(image.height):
-        for x in range(image.width):
-            pixel = image.get_pixel(x, y)
-            pixel.red = 255
-            pixel.green = 255
-            pixel.blue = 0
-    image.show()
+Get pix at x,y
+  pix = image.get_pix(x, y)
+  # pix is RGB tuple like (100, 200, 0)
+
+Set pix at x,y
+  image.set_pix(x, y, pix)   # set data by tuple also
+
+Get Pixel object at x,y
+  pixel = image.get_pixel(x, y)
+  pixel.red = 0
+  pixel.blue = 255
+
+Show image on screen
+  image.show()
+
+The main() function below demonstrates the above functions as a test.
 """
 
-# If this line fails, "Pillow" needs to be installed
+import sys
+# If the following line fails, "Pillow" needs to be installed
 from PIL import Image
 
 
@@ -111,11 +115,26 @@ BACK_COLORS = {
 
 
 class SimpleImage(object):
-    def __init__(self, width, height, back_color):
-        if not back_color:
-            back_color = 'white'
-        color_tuple = BACK_COLORS[back_color]
-        self.pil_image = Image.new('RGB', (width, height), color_tuple)
+    def __init__(self, filename, width=0, height=0, back_color=None):
+        """
+        Create a new image. This case works: SimpleImage('foo.jpg')
+        To create a blank image use SimpleImage.blank(500, 300)
+        The other parameters here are for internal/experimental use.
+        """
+        # Create pil_image either from file, or making blank
+        if filename:
+            self.pil_image = Image.open(filename)
+            if (self.pil_image.mode != 'RGB'):
+                raise Exception('Image file is not RGB')
+            self._filename = filename # hold onto
+        else:
+            if not back_color:
+                back_color = 'white'
+            color_tuple = BACK_COLORS[back_color]
+            if width == 0 or height == 0:
+                raise Exception('Creating blank image requires width/height but got {} {}'
+                                .format(width, height))
+            self.pil_image = Image.new('RGB', (width, height), color_tuple)
         self.px = self.pil_image.load()
         size = self.pil_image.size
         self._width = size[0]
@@ -123,8 +142,13 @@ class SimpleImage(object):
 
     @classmethod
     def blank(cls, width, height, back_color=None):
-        """Create a new blank image of the given width and height."""
-        return SimpleImage(width, height, back_color=back_color)
+        """Create a new blank image of the given width and height, optional back_color."""
+        return SimpleImage('', width, height, back_color=back_color)
+
+    @classmethod
+    def file(cls, filename):
+        """Create a new image based on a file, alternative to raw constructor."""
+        return SimpleImage(filename)
 
     @property
     def width(self):
@@ -135,6 +159,13 @@ class SimpleImage(object):
     def height(self):
         """Height of image in pixels."""
         return self._height
+
+    def in_bounds(self, x, y):
+        """
+        Return True if the given x,y is within the width,height bounds of this image
+        i.e. get_pixel() a this x,y is valid.
+        """
+        return x >= 0 and x < self.width and y >= 0 and y < self.height
 
     def get_pixel(self, x, y):
         """
@@ -155,6 +186,14 @@ class SimpleImage(object):
         """
         self.px[x, y] = (red, green, blue)
 
+    def get_pix(self, x, y):
+        """Get pix RGB tuple (200, 100, 50) for the given x,y."""
+        return self.px[x, y]
+
+    def set_pix(self, x, y, pix):
+        """Set the given pix RGB tuple into the image at the given x,y."""
+        self.px[x, y] = pix
+
     def show(self):
         """Displays the image using an external utility."""
         self.pil_image.show()
@@ -162,8 +201,18 @@ class SimpleImage(object):
 
 def main():
     """
-    main() runs an example - makes a big yellow image.
+    main() exercises the features as a test.
+    1. With 1 arg like flowers.jpg - opens it
+    2. With 0 args, creates a yellow square with
+    a green stripe at the right edge.
     """
+    args = sys.argv[1:]
+    if len(args) == 1:
+        image = SimpleImage.file(args[0])
+        image.show()
+        return
+
+    # Create yellow rectangle, using Pixel access.
     image = SimpleImage.blank(400, 200)
     for y in range(image.height):
         for x in range(image.width):
@@ -171,6 +220,13 @@ def main():
             pixel.red = 255
             pixel.green = 255
             pixel.blue = 0
+
+    # Set green stripe using pix access.
+    pix = image.get_pix(0, 0)
+    green = (0, pix[1], 0)
+    for x in range(image.width - 10, image.width):
+        for y in range(image.height):
+            image.set_pix(x, y, green)
     image.show()
 
 
